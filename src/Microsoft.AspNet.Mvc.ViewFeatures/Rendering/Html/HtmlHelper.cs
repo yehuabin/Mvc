@@ -21,7 +21,7 @@ namespace Microsoft.AspNet.Mvc.Rendering
     /// <summary>
     /// Default implementation of <see cref="IHtmlHelper"/>.
     /// </summary>
-    public class HtmlHelper : IHtmlHelper, ICanHasViewContext
+    public class HtmlHelper : IHtmlHelper
     {
         public static readonly string ValidationInputCssClassName = "input-validation-error";
         public static readonly string ValidationInputValidCssClassName = "input-validation-valid";
@@ -33,8 +33,7 @@ namespace Microsoft.AspNet.Mvc.Rendering
         private readonly IHtmlGenerator _htmlGenerator;
         private readonly ICompositeViewEngine _viewEngine;
         private readonly IHtmlEncoder _htmlEncoder;
-
-        private ViewContext _viewContext;
+        private readonly IViewContextAccessor _viewContextAccessor;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="HtmlHelper"/> class.
@@ -45,7 +44,8 @@ namespace Microsoft.AspNet.Mvc.Rendering
             [NotNull] IModelMetadataProvider metadataProvider,
             [NotNull] IHtmlEncoder htmlEncoder,
             [NotNull] IUrlEncoder urlEncoder,
-            [NotNull] IJavaScriptStringEncoder javaScriptStringEncoder)
+            [NotNull] IJavaScriptStringEncoder javaScriptStringEncoder,
+            [NotNull] IViewContextAccessor viewContextAccessor)
         {
             _viewEngine = viewEngine;
             _htmlGenerator = htmlGenerator;
@@ -53,6 +53,7 @@ namespace Microsoft.AspNet.Mvc.Rendering
             MetadataProvider = metadataProvider;
             UrlEncoder = urlEncoder;
             JavaScriptStringEncoder = javaScriptStringEncoder;
+            _viewContextAccessor = viewContextAccessor;
         }
 
         /// <inheritdoc />
@@ -82,16 +83,7 @@ namespace Microsoft.AspNet.Mvc.Rendering
         {
             get
             {
-                if (_viewContext == null)
-                {
-                    throw new InvalidOperationException(Resources.HtmlHelper_NotContextualized);
-                }
-
-                return _viewContext;
-            }
-            private set
-            {
-                _viewContext = value;
+                return _viewContextAccessor.CurrentContext;
             }
         }
 
@@ -182,11 +174,6 @@ namespace Microsoft.AspNet.Mvc.Rendering
             }
 
             return dictionary;
-        }
-
-        public virtual void Contextualize([NotNull] ViewContext viewContext)
-        {
-            ViewContext = viewContext;
         }
 
         /// <inheritdoc />
@@ -442,14 +429,16 @@ namespace Microsoft.AspNet.Mvc.Rendering
                                                      string templateName,
                                                      object additionalViewData)
         {
-            var templateBuilder = new TemplateBuilder(_viewEngine,
-                                                      ViewContext,
-                                                      ViewData,
-                                                      modelExplorer,
-                                                      htmlFieldName,
-                                                      templateName,
-                                                      readOnly: true,
-                                                      additionalViewData: additionalViewData);
+            var templateBuilder = new TemplateBuilder(
+                _viewContextAccessor,
+                _viewEngine,
+                ViewContext,
+                ViewData,
+                modelExplorer,
+                htmlFieldName,
+                templateName,
+                readOnly: true,
+                additionalViewData: additionalViewData);
 
             return templateBuilder.Build();
         }
@@ -482,7 +471,10 @@ namespace Microsoft.AspNet.Mvc.Rendering
             using (view as IDisposable)
             {
                 var viewContext = new ViewContext(ViewContext, view, newViewData, writer);
-                await viewEngineResult.View.RenderAsync(viewContext);
+                using (_viewContextAccessor.PushContext(viewContext))
+                {
+                    await viewEngineResult.View.RenderAsync(viewContext);
+                }
             }
         }
 
@@ -696,6 +688,7 @@ namespace Microsoft.AspNet.Mvc.Rendering
             object additionalViewData)
         {
             var templateBuilder = new TemplateBuilder(
+                _viewContextAccessor,
                 _viewEngine,
                 ViewContext,
                 ViewData,

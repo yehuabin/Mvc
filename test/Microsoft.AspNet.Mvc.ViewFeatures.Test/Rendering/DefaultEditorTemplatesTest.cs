@@ -873,7 +873,7 @@ Environment.NewLine;
             public string OrderedProperty1 { get; set; }
         }
 
-        private class StubbyHtmlHelper : IHtmlHelper, ICanHasViewContext
+        private class StubbyHtmlHelper : IHtmlHelper
         {
             private readonly IHtmlHelper _innerHelper;
 
@@ -926,11 +926,6 @@ Environment.NewLine;
             public IJavaScriptStringEncoder JavaScriptStringEncoder
             {
                 get { return _innerHelper.JavaScriptStringEncoder; }
-            }
-
-            public void Contextualize([NotNull] ViewContext viewContext)
-            {
-                (_innerHelper as ICanHasViewContext)?.Contextualize(viewContext);
             }
 
             public IHtmlContent ActionLink(

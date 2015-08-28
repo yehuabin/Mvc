@@ -69,17 +69,15 @@ namespace Microsoft.AspNet.Mvc
                 view,
                 viewData,
                 null,
-                TextWriter.Null,
+                new StreamWriter(stream) { AutoFlush = true },
                 new HtmlHelperOptions());
-
-            var writer = new StreamWriter(stream) { AutoFlush = true };
 
             var viewComponentDescriptor = new ViewComponentDescriptor()
             {
                 Type = typeof(object),
             };
 
-            var viewComponentContext = new ViewComponentContext(viewComponentDescriptor, new object[0], viewContext, writer);
+            var viewComponentContext = new ViewComponentContext(viewComponentDescriptor, new object[0], viewContext);
             return viewComponentContext;
         }
 

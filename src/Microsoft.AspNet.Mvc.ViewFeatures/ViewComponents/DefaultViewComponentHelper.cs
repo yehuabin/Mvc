@@ -10,26 +10,31 @@ using Microsoft.Framework.Internal;
 
 namespace Microsoft.AspNet.Mvc.ViewComponents
 {
-    public class DefaultViewComponentHelper : IViewComponentHelper, ICanHasViewContext
+    public class DefaultViewComponentHelper : IViewComponentHelper
     {
         private readonly IViewComponentDescriptorCollectionProvider _descriptorProvider;
         private readonly IViewComponentInvokerFactory _invokerFactory;
         private readonly IViewComponentSelector _selector;
-        private ViewContext _viewContext;
+        private readonly IViewContextAccessor _viewContextAccessor;
 
         public DefaultViewComponentHelper(
             [NotNull] IViewComponentDescriptorCollectionProvider descriptorProvider,
             [NotNull] IViewComponentSelector selector,
-            [NotNull] IViewComponentInvokerFactory invokerFactory)
+            [NotNull] IViewComponentInvokerFactory invokerFactory,
+            [NotNull] IViewContextAccessor viewContextAccessor)
         {
             _descriptorProvider = descriptorProvider;
             _selector = selector;
             _invokerFactory = invokerFactory;
+            _viewContextAccessor = viewContextAccessor;
         }
 
-        public void Contextualize([NotNull] ViewContext viewContext)
+        protected ViewContext ViewContext
         {
-            _viewContext = viewContext;
+            get
+            {
+                return _viewContextAccessor.CurrentContext;
+            }
         }
 
         public HtmlString Invoke([NotNull] string name, params object[] arguments)
@@ -57,13 +62,13 @@ namespace Microsoft.AspNet.Mvc.ViewComponents
         public void RenderInvoke([NotNull] string name, params object[] arguments)
         {
             var descriptor = SelectComponent(name);
-            InvokeCore(_viewContext.Writer, descriptor, arguments);
+            InvokeCore(ViewContext.Writer, descriptor, arguments);
         }
 
         public void RenderInvoke([NotNull] Type componentType, params object[] arguments)
         {
             var descriptor = SelectComponent(componentType);
-            InvokeCore(_viewContext.Writer, descriptor, arguments);
+            InvokeCore(ViewContext.Writer, descriptor, arguments);
         }
 
         public async Task<HtmlString> InvokeAsync([NotNull] string name, params object[] arguments)
@@ -91,13 +96,13 @@ namespace Microsoft.AspNet.Mvc.ViewComponents
         public async Task RenderInvokeAsync([NotNull] string name, params object[] arguments)
         {
             var descriptor = SelectComponent(name);
-            await InvokeCoreAsync(_viewContext.Writer, descriptor, arguments);
+            await InvokeCoreAsync(ViewContext.Writer, descriptor, arguments);
         }
 
         public async Task RenderInvokeAsync([NotNull] Type componentType, params object[] arguments)
         {
             var descriptor = SelectComponent(componentType);
-            await InvokeCoreAsync(_viewContext.Writer, descriptor, arguments);
+            await InvokeCoreAsync(ViewContext.Writer, descriptor, arguments);
         }
 
         private ViewComponentDescriptor SelectComponent(string name)
@@ -131,7 +136,15 @@ namespace Microsoft.AspNet.Mvc.ViewComponents
             [NotNull] ViewComponentDescriptor descriptor,
             object[] arguments)
         {
-            var context = new ViewComponentContext(descriptor, arguments, _viewContext, writer);
+            // We want to create a defensive copy of the VDD here so that changes done in the VC
+            // aren't visible in the calling view.
+            var viewContext = new ViewContext(
+                ViewContext,
+                ViewContext.View,
+                new ViewDataDictionary(ViewContext.ViewData),
+                writer);
+
+            var context = new ViewComponentContext(descriptor, arguments, ViewContext);
 
             var invoker = _invokerFactory.CreateInstance(context);
             if (invoker == null)
@@ -140,7 +153,10 @@ namespace Microsoft.AspNet.Mvc.ViewComponents
                     Resources.FormatViewComponent_IViewComponentFactory_ReturnedNull(descriptor.Type.FullName));
             }
 
-            await invoker.InvokeAsync(context);
+            using (_viewContextAccessor.PushContext(viewContext))
+            {
+                await invoker.InvokeAsync(context);
+            }
         }
 
         private void InvokeCore(
@@ -148,7 +164,15 @@ namespace Microsoft.AspNet.Mvc.ViewComponents
             [NotNull] ViewComponentDescriptor descriptor,
             object[] arguments)
         {
-            var context = new ViewComponentContext(descriptor, arguments, _viewContext, writer);
+            // We want to create a defensive copy of the VDD here so that changes done in the VC
+            // aren't visible in the calling view.
+            var viewContext = new ViewContext(
+                ViewContext,
+                ViewContext.View,
+                new ViewDataDictionary(ViewContext.ViewData),
+                writer);
+
+            var context = new ViewComponentContext(descriptor, arguments, ViewContext);
 
             var invoker = _invokerFactory.CreateInstance(context);
             if (invoker == null)
@@ -157,7 +181,10 @@ namespace Microsoft.AspNet.Mvc.ViewComponents
                     Resources.FormatViewComponent_IViewComponentFactory_ReturnedNull(descriptor.Type.FullName));
             }
 
-            invoker.Invoke(context);
+            using (_viewContextAccessor.PushContext(viewContext))
+            {
+                invoker.Invoke(context);
+            }
         }
     }
 }

@@ -202,6 +202,10 @@ namespace Microsoft.AspNet.Mvc
                         .Returns(new MvcViewOptions());
                     return optionsAccessor.Object;
                 });
+            serviceProvider
+                .Setup(s => s.GetService(typeof(IViewContextAccessor)))
+                .Returns(new ViewContextAccessor());
+
             context.HttpContext.RequestServices = serviceProvider.Object;
 
             var viewResult = new PartialViewResult
@@ -229,6 +233,10 @@ namespace Microsoft.AspNet.Mvc
                         .Returns(new MvcViewOptions());
                     return optionsAccessor.Object;
                 });
+
+            serviceProvider
+                .Setup(s => s.GetService(typeof(IViewContextAccessor)))
+                .Returns(new ViewContextAccessor());
 
             var httpContext = new DefaultHttpContext();
             httpContext.RequestServices = serviceProvider.Object;

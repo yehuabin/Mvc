@@ -193,6 +193,10 @@ namespace Microsoft.AspNet.Mvc
             serviceProvider.Setup(p => p.GetService(typeof(ICompositeViewEngine)))
                 .Returns(viewEngine.Object);
 
+            serviceProvider
+                .Setup(s => s.GetService(typeof(IViewContextAccessor)))
+                .Returns(new ViewContextAccessor());
+
             var viewData = new ViewDataDictionary(new EmptyModelMetadataProvider());
 
             var result = new ViewViewComponentResult
@@ -240,34 +244,6 @@ namespace Microsoft.AspNet.Mvc
             };
 
             var viewComponentContext = GetViewComponentContext(view, viewData);
-
-            // Act and Assert
-            var ex = await Assert.ThrowsAsync<InvalidOperationException>(
-                        () => result.ExecuteAsync(viewComponentContext));
-            Assert.Equal(expected, ex.Message);
-        }
-
-        [Fact]
-        public async Task ExecuteAsync_Throws_IfNoViewEngineCanBeResolved()
-        {
-            // Arrange
-            var expected = "No service for type 'Microsoft.AspNet.Mvc.Rendering.ICompositeViewEngine'" +
-                " has been registered.";
-
-            var view = Mock.Of<IView>();
-
-            var serviceProvider = new ServiceCollection().BuildServiceProvider();
-
-            var viewData = new ViewDataDictionary(new EmptyModelMetadataProvider());
-
-            var result = new ViewViewComponentResult
-            {
-                ViewName = "some-view",
-                ViewData = viewData
-            };
-
-            var viewComponentContext = GetViewComponentContext(view, viewData);
-            viewComponentContext.ViewContext.HttpContext.RequestServices = serviceProvider;
 
             // Act and Assert
             var ex = await Assert.ThrowsAsync<InvalidOperationException>(
@@ -330,7 +306,13 @@ namespace Microsoft.AspNet.Mvc
 
         private static ViewComponentContext GetViewComponentContext(IView view, ViewDataDictionary viewData)
         {
-            var actionContext = new ActionContext(new DefaultHttpContext(), new RouteData(), new ActionDescriptor());
+            var services = new ServiceCollection();
+            services.AddSingleton<IViewContextAccessor, ViewContextAccessor>();
+
+            var httpContext = new DefaultHttpContext();
+            httpContext.RequestServices = services.BuildServiceProvider();
+
+            var actionContext = new ActionContext(httpContext, new RouteData(), new ActionDescriptor());
             var viewContext = new ViewContext(
                 actionContext,
                 view,
@@ -347,8 +329,7 @@ namespace Microsoft.AspNet.Mvc
             var viewComponentContext = new ViewComponentContext(
                 viewComponentDescriptor,
                 new object[0],
-                viewContext,
-                TextWriter.Null);
+                viewContext);
 
             return viewComponentContext;
         }

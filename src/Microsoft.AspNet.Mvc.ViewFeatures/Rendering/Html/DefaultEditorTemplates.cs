@@ -88,6 +88,7 @@ namespace Microsoft.AspNet.Mvc.Rendering
                 var fieldNameBase = oldPrefix;
                 var result = new BufferedHtmlContent();
                 var viewEngine = serviceProvider.GetRequiredService<ICompositeViewEngine>();
+                var viewContextAccessor = serviceProvider.GetRequiredService<IViewContextAccessor>();
 
                 var index = 0;
                 foreach (var item in collection)
@@ -106,6 +107,7 @@ namespace Microsoft.AspNet.Mvc.Rendering
                     var fieldName = string.Format(CultureInfo.InvariantCulture, "{0}[{1}]", fieldNameBase, index++);
 
                     var templateBuilder = new TemplateBuilder(
+                        viewContextAccessor,
                         viewEngine,
                         htmlHelper.ViewContext,
                         htmlHelper.ViewData,
@@ -246,6 +248,7 @@ namespace Microsoft.AspNet.Mvc.Rendering
 
             var serviceProvider = htmlHelper.ViewContext.HttpContext.RequestServices;
             var viewEngine = serviceProvider.GetRequiredService<ICompositeViewEngine>();
+            var viewContextAccessor = serviceProvider.GetRequiredService<IViewContextAccessor>();
 
             var content = new BufferedHtmlContent();
             foreach (var propertyExplorer in modelExplorer.Properties)
@@ -257,6 +260,7 @@ namespace Microsoft.AspNet.Mvc.Rendering
                 }
 
                 var templateBuilder = new TemplateBuilder(
+                    viewContextAccessor,
                     viewEngine,
                     htmlHelper.ViewContext,
                     htmlHelper.ViewData,

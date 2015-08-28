@@ -321,6 +321,7 @@ namespace Microsoft.AspNet.Mvc
             services.AddSingleton<IViewComponentActivator, DefaultViewComponentActivator>();
             services.AddInstance<IViewComponentDescriptorProvider>(new FixedSetViewComponentDescriptorProvider(descriptors));
             services.AddSingleton<IModelMetadataProvider, EmptyModelMetadataProvider>();
+            services.AddSingleton<IViewContextAccessor, ViewContextAccessor>();
 
             return services;
         }

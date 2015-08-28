@@ -55,12 +55,11 @@ namespace Microsoft.AspNet.Mvc
         /// <inheritdoc />
         public override async Task ExecuteResultAsync([NotNull] ActionContext context)
         {
-            var viewEngine = ViewEngine ??
-                             context.HttpContext.RequestServices.GetRequiredService<ICompositeViewEngine>();
-
-            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<PartialViewResult>>();
-
-            var options = context.HttpContext.RequestServices.GetRequiredService<IOptions<MvcViewOptions>>();
+            var services = context.HttpContext.RequestServices;
+            var viewEngine = ViewEngine ?? services.GetRequiredService<ICompositeViewEngine>();
+            var logger = services.GetRequiredService<ILogger<PartialViewResult>>();
+            var options = services.GetRequiredService<IOptions<MvcViewOptions>>();
+            var viewContextAccessor = services.GetRequiredService<IViewContextAccessor>();
 
             var viewName = ViewName ?? context.ActionDescriptor.Name;
             var viewEngineResult = viewEngine.FindPartialView(context, viewName);
@@ -84,6 +83,7 @@ namespace Microsoft.AspNet.Mvc
             using (view as IDisposable)
             {
                 await ViewExecutor.ExecuteAsync(
+                    viewContextAccessor,
                     view,
                     context,
                     ViewData,

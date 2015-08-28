@@ -29,14 +29,17 @@ namespace Microsoft.AspNet.Mvc.Localization.Test
             htmlLocalizerFactory.Setup(h => h.Create("TestApplication.example", "TestApplication"))
                 .Returns(htmlLocalizer.Object);
 
-            var viewLocalizer = new ViewLocalizer(htmlLocalizerFactory.Object, applicationEnvironment.Object);
-
             var view = new Mock<IView>();
             view.Setup(v => v.Path).Returns("example");
             var viewContext = new ViewContext();
             viewContext.View = view.Object;
 
-            viewLocalizer.Contextualize(viewContext);
+            var viewContextAccessor = new ViewContextAccessor();
+            viewContextAccessor.PushContext(viewContext);
+            var viewLocalizer = new ViewLocalizer(
+                htmlLocalizerFactory.Object, 
+                applicationEnvironment.Object,
+                viewContextAccessor);
 
             // Act
             var actualLocalizedString = viewLocalizer["Hello"];
@@ -61,14 +64,17 @@ namespace Microsoft.AspNet.Mvc.Localization.Test
             htmlLocalizerFactory.Setup(
                 h => h.Create("TestApplication.example", "TestApplication")).Returns(htmlLocalizer.Object);
 
-            var viewLocalizer = new ViewLocalizer(htmlLocalizerFactory.Object, applicationEnvironment.Object);
-
             var view = new Mock<IView>();
             view.Setup(v => v.Path).Returns("example");
             var viewContext = new ViewContext();
             viewContext.View = view.Object;
 
-            viewLocalizer.Contextualize(viewContext);
+            var viewContextAccessor = new ViewContextAccessor();
+            viewContextAccessor.PushContext(viewContext);
+            var viewLocalizer = new ViewLocalizer(
+                htmlLocalizerFactory.Object,
+                applicationEnvironment.Object,
+                viewContextAccessor);
 
             // Act
             var actualLocalizedString = viewLocalizer["Hello", "test"];

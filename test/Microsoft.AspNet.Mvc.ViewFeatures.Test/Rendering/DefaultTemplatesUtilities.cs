@@ -212,6 +212,7 @@ namespace Microsoft.AspNet.Mvc.Rendering
             var httpContext = new DefaultHttpContext();
             var actionContext = new ActionContext(httpContext, new RouteData(), new ActionDescriptor());
 
+            var viewContextAccessor = new ViewContextAccessor();
             var options = new MvcViewOptions();
             if (!string.IsNullOrEmpty(idAttributeDotReplacement))
             {
@@ -233,6 +234,9 @@ namespace Microsoft.AspNet.Mvc.Rendering
             serviceProvider
                 .Setup(s => s.GetService(typeof(IViewComponentHelper)))
                 .Returns(new Mock<IViewComponentHelper>().Object);
+            serviceProvider
+                .Setup(s => s.GetService(typeof(IViewContextAccessor)))
+                .Returns(viewContextAccessor);
 
             httpContext.RequestServices = serviceProvider.Object;
             if (htmlGenerator == null)
@@ -245,14 +249,14 @@ namespace Microsoft.AspNet.Mvc.Rendering
                     new CommonTestEncoder());
             }
 
-            // TemplateRenderer will Contextualize this transient service.
             var innerHelper = (IHtmlHelper)new HtmlHelper(
                 htmlGenerator,
                 viewEngine,
                 provider,
                 new CommonTestEncoder(),
                 new UrlEncoder(),
-                new JavaScriptStringEncoder());
+                new JavaScriptStringEncoder(),
+                viewContextAccessor);
 
             if (innerHelperWrapper != null)
             {
@@ -268,7 +272,8 @@ namespace Microsoft.AspNet.Mvc.Rendering
                 provider,
                 new CommonTestEncoder(),
                 new UrlEncoder(),
-                new JavaScriptStringEncoder());
+                new JavaScriptStringEncoder(),
+                viewContextAccessor);
 
             var viewContext = new ViewContext(
                 actionContext,
@@ -278,7 +283,7 @@ namespace Microsoft.AspNet.Mvc.Rendering
                 new StringWriter(),
                 options.HtmlHelperOptions);
 
-            htmlHelper.Contextualize(viewContext);
+            viewContextAccessor.PushContext(viewContext);
 
             return htmlHelper;
         }

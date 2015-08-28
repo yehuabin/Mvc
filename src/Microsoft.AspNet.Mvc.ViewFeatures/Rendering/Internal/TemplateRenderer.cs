@@ -67,19 +67,22 @@ namespace Microsoft.AspNet.Mvc.Rendering.Internal
                 { IEnumerableOfIFormFileName, DefaultEditorTemplates.FileCollectionInputTemplate },
             };
 
-        private ViewContext _viewContext;
-        private ViewDataDictionary _viewData;
-        private IViewEngine _viewEngine;
-        private string _templateName;
-        private bool _readOnly;
+        private readonly ViewContext _viewContext;
+        private readonly IViewContextAccessor _viewContextAccessor;
+        private readonly ViewDataDictionary _viewData;
+        private readonly IViewEngine _viewEngine;
+        private readonly string _templateName;
+        private readonly bool _readOnly;
 
         public TemplateRenderer(
+            [NotNull] IViewContextAccessor viewContextAccessor,
             [NotNull] IViewEngine viewEngine,
             [NotNull] ViewContext viewContext,
             [NotNull] ViewDataDictionary viewData,
             string templateName,
             bool readOnly)
         {
+            _viewContextAccessor = viewContextAccessor;
             _viewEngine = viewEngine;
             _viewContext = viewContext;
             _viewData = viewData;
@@ -106,9 +109,12 @@ namespace Microsoft.AspNet.Mvc.Rendering.Internal
                         using (view as IDisposable)
                         {
                             var viewContext = new ViewContext(_viewContext, viewEngineResult.View, _viewData, writer);
-                            var renderTask = viewEngineResult.View.RenderAsync(viewContext);
-                            renderTask.GetAwaiter().GetResult();
-                            return writer.Content;
+                            using (_viewContextAccessor.PushContext(viewContext))
+                            {
+                                var renderTask = viewEngineResult.View.RenderAsync(viewContext);
+                                renderTask.GetAwaiter().GetResult();
+                                return writer.Content;
+                            }
                         }
                     }
                 }
@@ -116,7 +122,12 @@ namespace Microsoft.AspNet.Mvc.Rendering.Internal
                 Func<IHtmlHelper, IHtmlContent> defaultAction;
                 if (defaultActions.TryGetValue(viewName, out defaultAction))
                 {
-                    return defaultAction(MakeHtmlHelper(_viewContext, _viewData));
+                    var viewContext = new ViewContext(_viewContext, _viewContext.View, _viewData, _viewContext.Writer);
+                    using (_viewContextAccessor.PushContext(viewContext))
+                    {
+                        var htmlHelper = _viewContext.HttpContext.RequestServices.GetRequiredService<IHtmlHelper>();
+                        return defaultAction(htmlHelper);
+                    }
                 }
             }
 
@@ -221,20 +232,6 @@ namespace Microsoft.AspNet.Mvc.Rendering.Internal
             }
 
             yield return "Object";
-        }
-
-        private static IHtmlHelper MakeHtmlHelper(ViewContext viewContext, ViewDataDictionary viewData)
-        {
-            var newHelper = viewContext.HttpContext.RequestServices.GetRequiredService<IHtmlHelper>();
-
-            var contextable = newHelper as ICanHasViewContext;
-            if (contextable != null)
-            {
-                var newViewContext = new ViewContext(viewContext, viewContext.View, viewData, viewContext.Writer);
-                contextable.Contextualize(newViewContext);
-            }
-
-            return newHelper;
         }
     }
 }

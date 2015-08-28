@@ -37,19 +37,11 @@ namespace Microsoft.AspNet.Mvc
         public ViewComponentContext(
             [NotNull] ViewComponentDescriptor viewComponentDescriptor,
             [NotNull] object[] arguments,
-            [NotNull] ViewContext viewContext,
-            [NotNull] TextWriter writer)
+            [NotNull] ViewContext viewContext)
         {
             ViewComponentDescriptor = viewComponentDescriptor;
             Arguments = arguments;
-
-            // We want to create a defensive copy of the VDD here so that changes done in the VC
-            // aren't visible in the calling view.
-            ViewContext = new ViewContext(
-                viewContext,
-                viewContext.View, 
-                new ViewDataDictionary(viewContext.ViewData),
-                writer);
+            ViewContext = viewContext;
         }
 
         /// <summary>

@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Mvc.ModelBinding;
@@ -65,11 +66,19 @@ namespace Microsoft.AspNet.Mvc
         /// <inheritdoc />
         public override async Task ExecuteResultAsync(ActionContext context)
         {
+            if (ViewComponentType == null && ViewComponentName == null)
+            {
+                throw new InvalidOperationException(Resources.FormatViewComponentResult_NameOrTypeMustBeSet(
+                    nameof(ViewComponentName),
+                    nameof(ViewComponentType)));
+            }
+
             var response = context.HttpContext.Response;
             var services = context.HttpContext.RequestServices;
 
             var htmlHelperOptions = services.GetRequiredService<IOptions<MvcViewOptions>>().Options.HtmlHelperOptions;
             var viewComponentHelper = services.GetRequiredService<IViewComponentHelper>();
+            var viewContextAccessor = services.GetRequiredService<IViewContextAccessor>();
 
             var viewData = ViewData;
             if (viewData == null)
@@ -103,21 +112,17 @@ namespace Microsoft.AspNet.Mvc
                     writer,
                     htmlHelperOptions);
 
-                (viewComponentHelper as ICanHasViewContext)?.Contextualize(viewContext);
-
-                if (ViewComponentType == null && ViewComponentName == null)
+                using (viewContextAccessor.PushContext(viewContext))
                 {
-                    throw new InvalidOperationException(Resources.FormatViewComponentResult_NameOrTypeMustBeSet(
-                        nameof(ViewComponentName),
-                        nameof(ViewComponentType)));
-                }
-                else if (ViewComponentType == null)
-                {
-                    await viewComponentHelper.RenderInvokeAsync(ViewComponentName, Arguments);
-                }
-                else
-                {
-                    await viewComponentHelper.RenderInvokeAsync(ViewComponentType, Arguments);
+                    if (ViewComponentType == null)
+                    {
+                        Debug.Assert(ViewComponentName != null);
+                        await viewComponentHelper.RenderInvokeAsync(ViewComponentName, Arguments);
+                    }
+                    else
+                    {
+                        await viewComponentHelper.RenderInvokeAsync(ViewComponentType, Arguments);
+                    }
                 }
             }
         }

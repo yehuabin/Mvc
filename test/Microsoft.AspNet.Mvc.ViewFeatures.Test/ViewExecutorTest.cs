@@ -104,6 +104,7 @@ namespace Microsoft.AspNet.Mvc
 
             // Act
             await ViewExecutor.ExecuteAsync(
+                new ViewContextAccessor(),
                 view.Object,
                 actionContext,
                 viewData,
@@ -141,6 +142,7 @@ namespace Microsoft.AspNet.Mvc
             // Act
             await Record.ExceptionAsync(
                 () => ViewExecutor.ExecuteAsync(
+                    new ViewContextAccessor(),
                     view.Object,
                     actionContext,
                     viewData,

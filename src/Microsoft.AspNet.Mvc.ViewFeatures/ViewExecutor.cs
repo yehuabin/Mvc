@@ -27,12 +27,14 @@ namespace Microsoft.AspNet.Mvc
         /// <param name="viewData">The <see cref="ViewDataDictionary"/> for the view being rendered.</param>
         /// <param name="tempData">The <see cref="ITempDataDictionary"/> for the view being rendered.</param>
         /// <returns>A <see cref="Task"/> that represents the asynchronous rendering.</returns>
-        public static async Task ExecuteAsync([NotNull] IView view,
-                                              [NotNull] ActionContext actionContext,
-                                              [NotNull] ViewDataDictionary viewData,
-                                              [NotNull] ITempDataDictionary tempData,
-                                              [NotNull] HtmlHelperOptions htmlHelperOptions,
-                                              MediaTypeHeaderValue contentType)
+        public static async Task ExecuteAsync(
+            [NotNull] IViewContextAccessor viewContextAccessor,
+            [NotNull] IView view,
+            [NotNull] ActionContext actionContext,
+            [NotNull] ViewDataDictionary viewData,
+            [NotNull] ITempDataDictionary tempData,
+            [NotNull] HtmlHelperOptions htmlHelperOptions,
+            MediaTypeHeaderValue contentType)
         {
             var response = actionContext.HttpContext.Response;
 
@@ -55,7 +57,10 @@ namespace Microsoft.AspNet.Mvc
                     writer,
                     htmlHelperOptions);
 
-                await view.RenderAsync(viewContext);
+                using (viewContextAccessor.PushContext(viewContext))
+                {
+                    await view.RenderAsync(viewContext);
+                }
             }
         }
     }

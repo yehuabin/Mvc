@@ -54,21 +54,21 @@ namespace Microsoft.AspNet.Mvc
         {
             var actionContext = new ActionContext(new DefaultHttpContext(), new RouteData(), new ActionDescriptor());
             var viewData = new ViewDataDictionary(new EmptyModelMetadataProvider());
+
             var viewContext = new ViewContext(
                 actionContext,
                 view,
-                viewData, null,
-                TextWriter.Null,
+                viewData, 
+                null,
+                new StreamWriter(stream) { AutoFlush = true },
                 new HtmlHelperOptions());
-
-            var writer = new StreamWriter(stream) { AutoFlush = true };
 
             var viewComponentDescriptor = new ViewComponentDescriptor()
             {
                 Type = typeof(object),
             };
 
-            var viewComponentContext = new ViewComponentContext(viewComponentDescriptor, new object[0], viewContext, writer);
+            var viewComponentContext = new ViewComponentContext(viewComponentDescriptor, new object[0], viewContext);
             return viewComponentContext;
         }
     }

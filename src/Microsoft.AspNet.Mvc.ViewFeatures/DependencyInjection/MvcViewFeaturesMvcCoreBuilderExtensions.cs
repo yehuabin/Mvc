@@ -68,12 +68,9 @@ namespace Microsoft.Framework.DependencyInjection
             //
             // HTML Helper
             //
-            services.TryAddTransient<IHtmlHelper, HtmlHelper>();
-            services.TryAddTransient(typeof(IHtmlHelper<>), typeof(HtmlHelper<>));
-
-            // DefaultHtmlGenerator is pretty much stateless but depends on IUrlHelper, which is scoped.
-            // Therefore it too is scoped.
-            services.TryAddScoped<IHtmlGenerator, DefaultHtmlGenerator>();
+            services.TryAddSingleton<IHtmlHelper, HtmlHelper>();
+            services.TryAddSingleton(typeof(IHtmlHelper<>), typeof(HtmlHelper<>));
+            services.TryAddSingleton<IHtmlGenerator, DefaultHtmlGenerator>();
 
             //
             // JSON Helper
@@ -97,7 +94,7 @@ namespace Microsoft.Framework.DependencyInjection
 
             services.TryAddTransient<IViewComponentDescriptorProvider, DefaultViewComponentDescriptorProvider>();
             services.TryAddSingleton<IViewComponentInvokerFactory, DefaultViewComponentInvokerFactory>();
-            services.TryAddTransient<IViewComponentHelper, DefaultViewComponentHelper>();
+            services.TryAddSingleton<IViewComponentHelper, DefaultViewComponentHelper>();
 
             //
             // Temp Data
@@ -108,6 +105,8 @@ namespace Microsoft.Framework.DependencyInjection
 
             // This does caching so it should stay singleton
             services.TryAddSingleton<ITempDataProvider, SessionStateTempDataProvider>();
+
+            services.TryAddSingleton<IViewContextAccessor, ViewContextAccessor>();
         }
     }
 }

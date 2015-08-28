@@ -3,17 +3,17 @@
 
 using System.Collections.Generic;
 using System.Globalization;
-using Microsoft.AspNet.Mvc.Rendering;
 using Microsoft.Framework.Internal;
 using Microsoft.Framework.Localization;
 using Microsoft.Dnx.Runtime;
+using Microsoft.AspNet.Mvc.ViewFeatures;
 
 namespace Microsoft.AspNet.Mvc.Localization
 {
     /// <summary>
     /// A <see cref="HtmlLocalizer"/> that provides localized strings for views.
     /// </summary>
-    public class ViewLocalizer : IViewLocalizer, ICanHasViewContext
+    public class ViewLocalizer : IViewLocalizer
     {
         private readonly IHtmlLocalizerFactory _localizerFactory;
         private readonly string _applicationName;
@@ -26,10 +26,20 @@ namespace Microsoft.AspNet.Mvc.Localization
         /// <param name="applicationEnvironment">The <see cref="IApplicationEnvironment"/>.</param>
         public ViewLocalizer(
             [NotNull] IHtmlLocalizerFactory localizerFactory,
-            [NotNull] IApplicationEnvironment applicationEnvironment)
+            [NotNull] IApplicationEnvironment applicationEnvironment,
+            [NotNull] IViewContextAccessor viewContextAccessor)
         {
             _applicationName = applicationEnvironment.ApplicationName;
             _localizerFactory = localizerFactory;
+
+            var viewContext = viewContextAccessor.CurrentContext;
+            var baseName = viewContext.View.Path.Replace('/', '.').Replace('\\', '.');
+            if (baseName.StartsWith("."))
+            {
+                baseName = baseName.Substring(1);
+            }
+            baseName = _applicationName + "." + baseName;
+            _localizer = _localizerFactory.Create(baseName, _applicationName);
         }
 
         /// <inheritdoc />
@@ -57,17 +67,6 @@ namespace Microsoft.AspNet.Mvc.Localization
 
         /// <inheritdoc />
         IHtmlLocalizer IHtmlLocalizer.WithCulture([NotNull] CultureInfo culture) => _localizer.WithCulture(culture);
-
-        public void Contextualize(ViewContext viewContext)
-        {
-            var baseName = viewContext.View.Path.Replace('/', '.').Replace('\\', '.');
-            if (baseName.StartsWith("."))
-            {
-                baseName = baseName.Substring(1);
-            }
-            baseName = _applicationName + "." + baseName;
-            _localizer = _localizerFactory.Create(baseName, _applicationName);
-        }
 
         /// <inheritdoc />
         public IEnumerable<LocalizedString> GetAllStrings(bool includeAncestorCultures) =>

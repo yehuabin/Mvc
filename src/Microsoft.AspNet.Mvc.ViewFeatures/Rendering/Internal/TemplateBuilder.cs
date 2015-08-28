@@ -10,26 +10,30 @@ namespace Microsoft.AspNet.Mvc.Rendering.Internal
 {
     public class TemplateBuilder
     {
-        private IViewEngine _viewEngine;
-        private ViewContext _viewContext;
-        private ViewDataDictionary _viewData;
-        private ModelExplorer _modelExplorer;
+        private readonly IViewEngine _viewEngine;
+        private readonly IViewContextAccessor _viewContextAccessor;
+        private readonly ViewContext _viewContext;
+        private readonly ViewDataDictionary _viewData;
+        private readonly ModelExplorer _modelExplorer;
         private object _model;
-        private ModelMetadata _metadata;
-        private string _htmlFieldName;
-        private string _templateName;
-        private bool _readOnly;
-        private object _additionalViewData;
+        private readonly ModelMetadata _metadata;
+        private readonly string _htmlFieldName;
+        private readonly string _templateName;
+        private readonly bool _readOnly;
+        private readonly object _additionalViewData;
 
-        public TemplateBuilder([NotNull] IViewEngine viewEngine,
-                               [NotNull] ViewContext viewContext,
-                               [NotNull] ViewDataDictionary viewData,
-                               [NotNull] ModelExplorer modelExplorer,
-                               string htmlFieldName,
-                               string templateName,
-                               bool readOnly,
-                               object additionalViewData)
+        public TemplateBuilder(
+            [NotNull] IViewContextAccessor viewContextAccessor,
+            [NotNull] IViewEngine viewEngine,
+            [NotNull] ViewContext viewContext,
+            [NotNull] ViewDataDictionary viewData,
+            [NotNull] ModelExplorer modelExplorer,
+            string htmlFieldName,
+            string templateName,
+            bool readOnly,
+            object additionalViewData)
         {
+            _viewContextAccessor = viewContextAccessor;
             _viewEngine = viewEngine;
             _viewContext = viewContext;
             _viewData = viewData;
@@ -94,7 +98,7 @@ namespace Microsoft.AspNet.Mvc.Rendering.Internal
             var visitedObjectsKey = _model ?? _modelExplorer.ModelType;
             viewData.TemplateInfo.AddVisited(visitedObjectsKey);
 
-            var templateRenderer = new TemplateRenderer(_viewEngine, _viewContext, viewData, _templateName, _readOnly);
+            var templateRenderer = new TemplateRenderer(_viewContextAccessor, _viewEngine, _viewContext, viewData, _templateName, _readOnly);
 
             return templateRenderer.Render();
         }

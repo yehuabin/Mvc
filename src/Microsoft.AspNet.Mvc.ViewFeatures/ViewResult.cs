@@ -61,8 +61,8 @@ namespace Microsoft.AspNet.Mvc
 
             var logger = services.GetRequiredService<ILogger<ViewResult>>();
             var notifier = services.GetRequiredService<INotifier>();
-
             var options = services.GetRequiredService<IOptions<MvcViewOptions>>();
+            var viewContextAccessor = services.GetRequiredService<IViewContextAccessor>();
 
             var viewName = ViewName ?? context.ActionDescriptor.Name;
             var viewEngineResult = viewEngine.FindView(context, viewName);
@@ -105,6 +105,7 @@ namespace Microsoft.AspNet.Mvc
             using (view as IDisposable)
             {
                 await ViewExecutor.ExecuteAsync(
+                    viewContextAccessor,
                     view,
                     context,
                     ViewData,

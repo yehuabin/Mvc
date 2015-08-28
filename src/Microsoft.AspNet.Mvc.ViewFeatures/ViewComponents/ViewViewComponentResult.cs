@@ -61,6 +61,7 @@ namespace Microsoft.AspNet.Mvc
         /// <returns>A <see cref="Task"/> which will complete when view rendering is completed.</returns>
         public async Task ExecuteAsync([NotNull] ViewComponentContext context)
         {
+            var viewContextAccessor = context.ViewContext.HttpContext.RequestServices.GetRequiredService<IViewContextAccessor>();
             var viewEngine = ViewEngine ?? ResolveViewEngine(context);
             var viewData = ViewData ?? context.ViewData;
             var isNullOrEmptyViewName = string.IsNullOrEmpty(ViewName);
@@ -104,7 +105,10 @@ namespace Microsoft.AspNet.Mvc
 
             using (view as IDisposable)
             {
-                await view.RenderAsync(childViewContext);
+                using (viewContextAccessor.PushContext(childViewContext))
+                {
+                    await view.RenderAsync(childViewContext);
+                }
             }
         }
 

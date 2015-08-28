@@ -24,36 +24,43 @@ namespace Microsoft.AspNet.Mvc.Rendering
             [NotNull] IModelMetadataProvider metadataProvider,
             [NotNull] IHtmlEncoder htmlEncoder,
             [NotNull] IUrlEncoder urlEncoder,
-            [NotNull] IJavaScriptStringEncoder javaScriptStringEncoder)
-            : base(htmlGenerator, viewEngine, metadataProvider, htmlEncoder, urlEncoder, javaScriptStringEncoder)
+            [NotNull] IJavaScriptStringEncoder javaScriptStringEncoder,
+            [NotNull] IViewContextAccessor viewContextAccessor)
+            : base(
+                  htmlGenerator,
+                  viewEngine,
+                  metadataProvider,
+                  htmlEncoder,
+                  urlEncoder,
+                  javaScriptStringEncoder,
+                  viewContextAccessor)
         {
         }
 
         /// <inheritdoc />
-        public new ViewDataDictionary<TModel> ViewData { get; private set; }
-
-        public override void Contextualize([NotNull] ViewContext viewContext)
+        public new ViewDataDictionary<TModel> ViewData
         {
-            if (viewContext.ViewData == null)
+            get
             {
-                throw new ArgumentException(Resources.FormatPropertyOfTypeCannotBeNull(
+                if (ViewContext.ViewData == null)
+                {
+                    throw new InvalidOperationException(Resources.FormatPropertyOfTypeCannotBeNull(
                         nameof(ViewContext.ViewData),
-                        typeof(ViewContext)),
-                    nameof(viewContext));
-            }
+                        typeof(ViewContext)));
+                }
 
-            ViewData = viewContext.ViewData as ViewDataDictionary<TModel>;
-            if (ViewData == null)
-            {
-                // viewContext may contain a base ViewDataDictionary instance. So complain about that type, not TModel.
-                throw new ArgumentException(Resources.FormatArgumentPropertyUnexpectedType(
+                var viewData = ViewContext.ViewData as ViewDataDictionary<TModel>;
+                if (viewData == null)
+                {
+                    // viewContext may contain a base ViewDataDictionary instance. So complain about that type, not TModel.
+                    throw new InvalidOperationException(Resources.FormatArgumentPropertyUnexpectedType(
                         nameof(ViewContext.ViewData),
-                        viewContext.ViewData.GetType().FullName,
-                        typeof(ViewDataDictionary<TModel>).FullName),
-                    nameof(viewContext));
-            }
+                        ViewContext.ViewData.GetType().FullName,
+                        typeof(ViewDataDictionary<TModel>).FullName));
+                }
 
-            base.Contextualize(viewContext);
+                return viewData;
+            }
         }
 
         /// <inheritdoc />
