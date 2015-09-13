@@ -10,6 +10,7 @@ using Microsoft.AspNet.Mvc.Actions;
 using Microsoft.AspNet.Mvc.ViewEngines;
 using Microsoft.AspNet.Routing;
 using Microsoft.Framework.Logging;
+using Microsoft.Framework.MemoryPool;
 using Microsoft.Framework.OptionsModel;
 using Microsoft.Net.Http.Headers;
 using Moq;
@@ -230,6 +231,13 @@ namespace Microsoft.AspNet.Mvc
                         .Returns(new MvcViewOptions());
                     return optionsAccessor.Object;
                 });
+
+            serviceProvider
+                .Setup(s => s.GetService(typeof(IArraySegmentPool<byte>)))
+                .Returns(new DefaultArraySegmentPool<byte>());
+            serviceProvider
+                .Setup(s => s.GetService(typeof(IArraySegmentPool<char>)))
+                .Returns(new DefaultArraySegmentPool<char>());
 
             var httpContext = new DefaultHttpContext();
             httpContext.RequestServices = serviceProvider.Object;
