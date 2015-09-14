@@ -10,10 +10,8 @@ using System.Net.Http.Formatting;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using System.Web.Http;
-using Microsoft.AspNet.Builder;
 using Microsoft.AspNet.Testing;
 using Microsoft.AspNet.Testing.xunit;
-using Microsoft.Framework.DependencyInjection;
 using Newtonsoft.Json;
 using Xunit;
 
@@ -21,11 +19,6 @@ namespace Microsoft.AspNet.Mvc.FunctionalTests
 {
     public class WebApiCompatShimBasicTest : IClassFixture<MvcTestFixture<WebApiCompatShimWebSite.Startup>>
     {
-        private const string SiteName = nameof(WebApiCompatShimWebSite);
-        private readonly Action<IApplicationBuilder> _app = new WebApiCompatShimWebSite.Startup().Configure;
-        private readonly Action<IServiceCollection> _configureServices =
-            new WebApiCompatShimWebSite.Startup().ConfigureServices;
-
         public WebApiCompatShimBasicTest(MvcTestFixture<WebApiCompatShimWebSite.Startup> fixture)
         {
             Client = fixture.Client;
@@ -288,16 +281,19 @@ namespace Microsoft.AspNet.Mvc.FunctionalTests
         public async Task ApiController_CreateResponse_Conneg(string accept, string mediaType)
         {
             // Arrange
-            var server = TestHelper.CreateServer(_app, SiteName, _configureServices);
-            var client = server.CreateClient();
-
             var request = new HttpRequestMessage(
                 HttpMethod.Get,
                 "http://localhost/api/Blog/HttpRequestMessage/GetUser");
             request.Headers.Accept.ParseAdd(accept);
 
+            Console.Error.WriteLine($"ApiController_CreateResponse_Conneg sending Accept header containing '{ request.Headers.Accept.Count }' values:");
+            foreach (var value in request.Headers.Accept)
+            {
+                Console.Error.WriteLine($"\tMediaType '{ value.MediaType }' CharSet '{ value.CharSet }' Quality '{ value.Quality }'");
+            }
+
             // Act
-            var response = await client.SendAsync(request);
+            var response = await Client.SendAsync(request);
             var user = await response.Content.ReadAsAsync<WebApiCompatShimWebSite.User>();
 
             // Assert
@@ -312,15 +308,18 @@ namespace Microsoft.AspNet.Mvc.FunctionalTests
         public async Task ApiController_CreateResponse_HardcodedMediaType(string mediaType)
         {
             // Arrange
-            var server = TestHelper.CreateServer(_app, SiteName, _configureServices);
-            var client = server.CreateClient();
-
             var request = new HttpRequestMessage(
                 HttpMethod.Get,
                 "http://localhost/api/Blog/HttpRequestMessage/GetUser?mediaType=" + mediaType);
 
+            Console.Error.WriteLine($"ApiController_CreateResponse_HardcodedMediaType sending Accept header containing '{ request.Headers.Accept.Count }' values:");
+            foreach (var value in request.Headers.Accept)
+            {
+                Console.Error.WriteLine($"\tMediaType '{ value.MediaType }' CharSet '{ value.CharSet }' Quality '{ value.Quality }'");
+            }
+
             // Act
-            var response = await client.SendAsync(request);
+            var response = await Client.SendAsync(request);
             var user = await response.Content.ReadAsAsync<WebApiCompatShimWebSite.User>();
 
             // Assert
@@ -337,16 +336,13 @@ namespace Microsoft.AspNet.Mvc.FunctionalTests
         public async Task ApiController_CreateResponse_Conneg_Error(string accept, string mediaType)
         {
             // Arrange
-            var server = TestHelper.CreateServer(_app, SiteName, _configureServices);
-            var client = server.CreateClient();
-
             var request = new HttpRequestMessage(
                 HttpMethod.Get,
                 "http://localhost/api/Blog/HttpRequestMessage/Fail");
             request.Headers.Accept.ParseAdd(accept);
 
             // Act
-            var response = await client.SendAsync(request);
+            var response = await Client.SendAsync(request);
             var error = await response.Content.ReadAsAsync<HttpError>();
 
             // Assert

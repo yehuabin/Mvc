@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -13,11 +14,19 @@ using System.Web.Http;
 using Microsoft.AspNet.Http;
 using Microsoft.AspNet.Mvc;
 using Microsoft.AspNet.Mvc.ActionResults;
+using Microsoft.AspNet.Mvc.Actions;
+using Microsoft.AspNet.Mvc.Filters;
 
 namespace WebApiCompatShimWebSite
 {
-    public class HttpRequestMessageController : ApiController
+    public class HttpRequestMessageController : ApiController, IResultFilter
     {
+        [FromServices]
+        public IHttpContextAccessor HttpContextAccessor { get; set; }
+
+        [FromServices]
+        public IActionContextAccessor ActionContextAccessor { get; set; }
+
         public async Task<IActionResult> EchoProperty()
         {
             await Echo(Request);
@@ -64,6 +73,12 @@ namespace WebApiCompatShimWebSite
 
         public HttpResponseMessage GetUser(string mediaType = null)
         {
+            Console.Error.WriteLine($"GetUser processing Accept header containing '{ Request.Headers.Accept.Count }' values:");
+            foreach (var value in Request.Headers.Accept)
+            {
+                Console.Error.WriteLine($"\tMediaType '{ value.MediaType }' CharSet '{ value.CharSet }' Quality '{ value.Quality }'");
+            }
+
             var user = new User()
             {
                 Name = "Test User",
@@ -71,7 +86,7 @@ namespace WebApiCompatShimWebSite
 
             if (mediaType == null)
             {
-                // This will perform content negotation
+                // This will perform content negotiation
                 return Request.CreateResponse<User>(HttpStatusCode.OK, user);
             }
             else
@@ -94,7 +109,7 @@ namespace WebApiCompatShimWebSite
         [HttpGet]
         public HttpResponseMessage Fail()
         {
-            // This will perform content negotation
+            // This will perform content negotiation
             return Request.CreateErrorResponse(HttpStatusCode.InternalServerError, "It failed.");
         }
 
@@ -183,6 +198,44 @@ namespace WebApiCompatShimWebSite
                 await request.Content.ReadAsStringAsync());
 
             await Context.Response.WriteAsync(message);
+        }
+
+        public void OnResultExecuting(ResultExecutingContext context)
+        {
+            Console.Error.WriteLine($"OnResultExecuting received Accept header containing '{ Request.Headers.Accept.Count }' values:");
+            foreach (var value in Request.Headers.Accept)
+            {
+                Console.Error.WriteLine($"\tMediaType '{ value.MediaType }' CharSet '{ value.CharSet }' Quality '{ value.Quality }'");
+            }
+
+            Debug.Assert(HttpContextAccessor.HttpContext == ActionContextAccessor.ActionContext.HttpContext);
+            Debug.Assert(HttpContextAccessor.HttpContext == Context);
+            Debug.Assert(HttpContextAccessor.HttpContext == Context.Request.HttpContext);
+
+            object httpContext;
+            Request.Properties.TryGetValue(nameof(HttpContext), out httpContext);
+            Debug.Assert(HttpContextAccessor.HttpContext == httpContext);
+
+            Debug.Assert(ActionContextAccessor.ActionContext.ActionDescriptor == context.ActionDescriptor);
+            Debug.Assert(ActionContextAccessor.ActionContext.HttpContext == context.HttpContext);
+            Debug.Assert(ActionContextAccessor.ActionContext.ModelState == context.ModelState);
+            Debug.Assert(ActionContextAccessor.ActionContext.RouteData == context.RouteData);
+        }
+
+        public void OnResultExecuted(ResultExecutedContext context)
+        {
+            Debug.Assert(HttpContextAccessor.HttpContext == ActionContextAccessor.ActionContext.HttpContext);
+            Debug.Assert(HttpContextAccessor.HttpContext == Context);
+            Debug.Assert(HttpContextAccessor.HttpContext == Context.Request.HttpContext);
+
+            object httpContext;
+            Request.Properties.TryGetValue(nameof(HttpContext), out httpContext);
+            Debug.Assert(HttpContextAccessor.HttpContext == httpContext);
+
+            Debug.Assert(ActionContextAccessor.ActionContext.ActionDescriptor == context.ActionDescriptor);
+            Debug.Assert(ActionContextAccessor.ActionContext.HttpContext == context.HttpContext);
+            Debug.Assert(ActionContextAccessor.ActionContext.ModelState == context.ModelState);
+            Debug.Assert(ActionContextAccessor.ActionContext.RouteData == context.RouteData);
         }
     }
 }
