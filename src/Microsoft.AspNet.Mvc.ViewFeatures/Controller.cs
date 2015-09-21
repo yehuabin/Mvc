@@ -941,17 +941,7 @@ namespace Microsoft.AspNet.Mvc
         [NonAction]
         public virtual CreatedResult Created([NotNull] Uri uri, object value)
         {
-            string location;
-            if (uri.IsAbsoluteUri)
-            {
-                location = uri.AbsoluteUri;
-            }
-            else
-            {
-                location = uri.GetComponents(UriComponents.SerializationInfoString, UriFormat.UriEscaped);
-            }
-
-            return Created(location, value);
+            return Created(uri, value);
         }
 
         /// <summary>
