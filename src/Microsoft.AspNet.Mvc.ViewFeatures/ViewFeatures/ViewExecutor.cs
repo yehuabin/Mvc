@@ -62,6 +62,7 @@ namespace Microsoft.AspNet.Mvc.ViewFeatures
                     htmlHelperOptions);
 
                 await view.RenderAsync(viewContext);
+                await writer.FlushAsync();
             }
         }
     }
